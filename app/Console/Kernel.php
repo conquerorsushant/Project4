@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Models\Listing;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -12,7 +13,27 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Expire featured listings whose featured_until date has passed
+        $schedule->call(function () {
+            Listing::where('is_featured', true)
+                ->whereNotNull('featured_until')
+                ->where('featured_until', '<', now())
+                ->update([
+                    'is_featured' => false,
+                    'featured_until' => null,
+                ]);
+        })->daily()->name('expire-featured-listings');
+
+        // Expire listings whose subscription has lapsed (check Cashier)
+        $schedule->call(function () {
+            Listing::where('status', 'active')
+                ->whereHas('user', function ($q) {
+                    $q->whereDoesntHave('subscriptions', function ($sq) {
+                        $sq->where('stripe_status', 'active');
+                    });
+                })
+                ->update(['status' => 'expired']);
+        })->daily()->name('expire-unpaid-listings');
     }
 
     /**
@@ -20,7 +41,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands(): void
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }
