@@ -15,7 +15,7 @@ class ResetPasswordNotification extends ResetPassword
     {
         $frontendUrl = config('app.frontend_url', 'http://localhost:3000');
 
-        return $frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->getEmailForPasswordResets());
+        return $frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->getEmailForPasswordReset());
     }
 
     /**

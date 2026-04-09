@@ -17,7 +17,9 @@ class ListingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Listing::active()
-            ->with(['category', 'user:id,name', 'media']);
+            ->with(['category', 'user:id,name', 'media'])
+            ->withCount('approvedReviews')
+            ->withAvg('approvedReviews', 'rating');
 
         // Featured first
         $query->orderByDesc('is_featured');

@@ -44,6 +44,12 @@ class FortifyServiceProvider extends ServiceProvider
                         ], 403);
                     }
 
+                    // Track last login
+                    $user->update([
+                        'last_login_at' => now(),
+                        'last_login_ip' => $request->ip(),
+                    ]);
+
                     $token = $user->createToken('api-token')->plainTextToken;
 
                     return new JsonResponse([
@@ -161,7 +167,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
         });

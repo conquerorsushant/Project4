@@ -27,6 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail, HasMedia, Filamen
      */
     protected $fillable = [
         'name',
+        'company_name',
         'email',
         'password',
         'phone',
@@ -36,6 +37,8 @@ class User extends Authenticatable implements MustVerifyEmail, HasMedia, Filamen
         'role',
         'is_banned',
         'banned_at',
+        'last_login_at',
+        'last_login_ip',
     ];
 
     /**
@@ -62,6 +65,7 @@ class User extends Authenticatable implements MustVerifyEmail, HasMedia, Filamen
         'password' => 'hashed',
         'is_banned' => 'boolean',
         'banned_at' => 'datetime',
+        'last_login_at' => 'datetime',
     ];
 
     /*

@@ -28,7 +28,7 @@ class BillingController extends Controller
                 'date' => $invoice->date()->toFormattedDateString(),
                 'total' => $invoice->total(),
                 'status' => $invoice->status,
-                'invoice_pdf' => $invoice->invoicePdf(),
+                'invoice_pdf' => $invoice->invoice_pdf,
             ];
         });
 

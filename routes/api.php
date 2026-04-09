@@ -129,4 +129,4 @@ Route::middleware('auth:sanctum')->group(function () {
 | Stripe Webhook (no auth — verified by Cashier via webhook secret)
 |--------------------------------------------------------------------------
 */
-Route::post('stripe/webhook', [\Laravel\Cashier\Http\Controllers\WebhookController::class, 'handleWebhook']);
+Route::post('stripe/webhook', [\App\Http\Controllers\StripeWebhookController::class, 'handleWebhook']);

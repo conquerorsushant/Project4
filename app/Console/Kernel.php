@@ -34,6 +34,9 @@ class Kernel extends ConsoleKernel
                 })
                 ->update(['status' => 'expired']);
         })->daily()->name('expire-unpaid-listings');
+
+        // Sync subscription billing data from Stripe (next payment dates, etc.)
+        $schedule->command('subscriptions:sync')->twiceDaily(6, 18)->name('sync-subscriptions');
     }
 
     /**

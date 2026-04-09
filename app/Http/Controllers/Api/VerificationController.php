@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ContactInquiry;
 use App\Models\Review;
 use App\Models\User;
+use App\Notifications\AdminNewInquiry;
 use App\Notifications\NewContactInquiry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,6 +89,14 @@ class VerificationController extends Controller
         // Now notify the listing owner
         if ($inquiry->listing && $inquiry->listing->user) {
             $inquiry->listing->user->notify(new NewContactInquiry($inquiry, $inquiry->listing));
+        }
+
+        // Notify admin
+        $adminEmail = config('app.admin_email');
+        if ($adminEmail) {
+            \Illuminate\Support\Facades\Notification::route('mail', $adminEmail)->notify(
+                new AdminNewInquiry($inquiry, $inquiry->listing)
+            );
         }
 
         return $this->verificationPage(

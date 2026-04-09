@@ -64,6 +64,16 @@ class Listing extends Model implements HasMedia
         'longitude' => 'decimal:7',
     ];
 
+    /**
+     * Append computed attributes to JSON.
+     */
+    protected $appends = [
+        'cover_url',
+        'gallery_urls',
+        'average_rating',
+        'hours_json',
+    ];
+
     /*
     |--------------------------------------------------------------------------
     | Slug
@@ -121,6 +131,56 @@ class Listing extends Model implements HasMedia
         $this->addMediaConversion('preview')
             ->width(800)
             ->height(600);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Computed Attributes (Accessors)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Cover image URL from Spatie Media Library.
+     */
+    public function getCoverUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('cover');
+        return $media ? $media->getUrl() : null;
+    }
+
+    /**
+     * Gallery image URLs from Spatie Media Library.
+     */
+    public function getGalleryUrlsAttribute(): array
+    {
+        return $this->getMedia('gallery')->map(fn($m) => $m->getUrl())->toArray();
+    }
+
+    /**
+     * Average rating from approved reviews.
+     * Uses the withAvg aggregate when available, otherwise computes from relation.
+     */
+    public function getAverageRatingAttribute()
+    {
+        // When withAvg('approvedReviews', 'rating') was used in the query
+        if (array_key_exists('approved_reviews_avg_rating', $this->attributes)) {
+            return $this->attributes['approved_reviews_avg_rating'];
+        }
+
+        // Fall back to computing from relation if loaded
+        if ($this->relationLoaded('approvedReviews')) {
+            return $this->approvedReviews->avg('rating');
+        }
+
+        return null;
+    }
+
+    /**
+     * Alias operating_hours as hours_json for frontend compatibility.
+     */
+    public function getHoursJsonAttribute()
+    {
+        return $this->operating_hours;
     }
 
     /*

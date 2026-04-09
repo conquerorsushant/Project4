@@ -24,7 +24,9 @@ class SearchController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $query = Listing::active()
-            ->with(['category:id,name,slug', 'user:id,name', 'media']);
+            ->with(['category:id,name,slug', 'user:id,name', 'media'])
+            ->withCount('approvedReviews')
+            ->withAvg('approvedReviews', 'rating');
 
         // Keyword search
         if ($request->filled('q')) {

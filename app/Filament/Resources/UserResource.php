@@ -3,12 +3,16 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Laravel\Cashier\Subscription;
 
 class UserResource extends Resource
 {
@@ -62,6 +66,16 @@ class UserResource extends Resource
                         Forms\Components\DateTimePicker::make('email_verified_at')
                             ->label('Email Verified At'),
                     ])->columns(2),
+
+                Forms\Components\Section::make('Login Activity')
+                    ->schema([
+                        Forms\Components\DateTimePicker::make('last_login_at')
+                            ->label('Last Login')
+                            ->disabled(),
+                        Forms\Components\TextInput::make('last_login_ip')
+                            ->label('Last Login IP')
+                            ->disabled(),
+                    ])->columns(2),
             ]);
     }
 
@@ -86,9 +100,48 @@ class UserResource extends Resource
                     ->boolean()
                     ->label('Verified')
                     ->getStateUsing(fn($record) => $record->email_verified_at !== null),
+                Tables\Columns\TextColumn::make('subscription_status')
+                    ->label('Subscription')
+                    ->badge()
+                    ->getStateUsing(function ($record) {
+                        $sub = $record->subscriptions()->latest()->first();
+                        if (!$sub) return 'none';
+                        if ($sub->stripe_status === 'active' && $sub->ends_at) return 'cancelling';
+                        return $sub->stripe_status;
+                    })
+                    ->color(fn(string $state) => match ($state) {
+                        'active' => 'success',
+                        'trialing' => 'info',
+                        'cancelling' => 'warning',
+                        'past_due' => 'warning',
+                        'canceled', 'incomplete_expired' => 'danger',
+                        'none' => 'gray',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('next_payment')
+                    ->label('Next Payment')
+                    ->getStateUsing(function ($record) {
+                        $sub = $record->subscriptions()
+                            ->where('stripe_status', 'active')
+                            ->latest()
+                            ->first();
+                        return $sub?->current_period_end;
+                    })
+                    ->dateTime()
+                    ->placeholder('—')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('listings_count')
                     ->counts('listings')
                     ->label('Listings'),
+                Tables\Columns\TextColumn::make('last_login_at')
+                    ->label('Last Login')
+                    ->dateTime()
+                    ->sortable()
+                    ->placeholder('Never')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('last_login_ip')
+                    ->label('Login IP')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -105,8 +158,21 @@ class UserResource extends Resource
                 Tables\Filters\TernaryFilter::make('email_verified_at')
                     ->label('Email Verified')
                     ->nullable(),
+                Tables\Filters\Filter::make('subscribed')
+                    ->label('Has Active Subscription')
+                    ->query(fn($query) => $query->whereHas('subscriptions', fn($q) => $q->where('stripe_status', 'active'))),
+                Tables\Filters\Filter::make('not_subscribed')
+                    ->label('No Active Subscription')
+                    ->query(fn($query) => $query->whereDoesntHave('subscriptions', fn($q) => $q->where('stripe_status', 'active'))),
+                Tables\Filters\Filter::make('logged_in_recently')
+                    ->label('Logged In (Last 7 Days)')
+                    ->query(fn($query) => $query->where('last_login_at', '>=', now()->subDays(7))),
+                Tables\Filters\Filter::make('never_logged_in')
+                    ->label('Never Logged In')
+                    ->query(fn($query) => $query->whereNull('last_login_at')),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('ban')
                     ->label('Ban')
@@ -132,7 +198,9 @@ class UserResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            RelationManagers\SubscriptionsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
@@ -141,6 +209,7 @@ class UserResource extends Resource
             'index' => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
+            'view' => Pages\ViewUser::route('/{record}'),
         ];
     }
 }
