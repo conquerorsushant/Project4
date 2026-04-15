@@ -65,8 +65,8 @@ class ListingResource extends Resource
                             ])
                             ->required()
                             ->default('draft'),
-                        Forms\Components\RichEditor::make('description')
-                            ->disableToolbarButtons(['attachFiles'])
+                        Forms\Components\Textarea::make('description')
+                            ->rows(5)
                             ->columnSpanFull(),
                     ])->columns(2),
 
