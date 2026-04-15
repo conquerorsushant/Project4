@@ -16,6 +16,7 @@ class ContactInquiry extends Model
         'email',
         'phone',
         'message',
+        'service_requested',
         'is_read',
         'is_verified',
         'verified_at',

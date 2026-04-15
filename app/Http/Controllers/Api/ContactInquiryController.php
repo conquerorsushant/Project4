@@ -29,6 +29,7 @@ class ContactInquiryController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
             'message' => ['required', 'string', 'max:5000'],
+            'service_requested' => ['nullable', 'string', 'max:255'],
         ]);
 
         $validated['listing_id'] = $listing->id;

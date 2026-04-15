@@ -8,10 +8,12 @@ use App\Notifications\ListingApproved;
 use App\Notifications\ListingRejected;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Illuminate\Support\HtmlString;
 
 class ListingResource extends Resource
 {
@@ -105,6 +107,76 @@ class ListingResource extends Resource
                         Forms\Components\TextInput::make('website')->url()->maxLength(255),
                     ])->columns(3),
 
+                Forms\Components\Section::make('Services Offered')
+                    ->description('Add the services this business provides')
+                    ->icon('heroicon-o-wrench-screwdriver')
+                    ->schema([
+                        Forms\Components\TagsInput::make('services')
+                            ->label('Services')
+                            ->placeholder('Type a service and press enter')
+                            ->helperText('Add services one at a time. Type and press Enter or comma to add each service.')
+                            ->splitKeys(['Tab', ','])
+                            ->columnSpanFull(),
+                    ]),
+
+                Forms\Components\Section::make('Business Hours')
+                    ->description('Set the weekly operating schedule')
+                    ->icon('heroicon-o-clock')
+                    ->schema([
+                        Forms\Components\Repeater::make('operating_hours')
+                            ->label('Weekly Schedule')
+                            ->schema([
+                                Forms\Components\Select::make('day')
+                                    ->label('Day')
+                                    ->options([
+                                        'monday' => 'Monday',
+                                        'tuesday' => 'Tuesday',
+                                        'wednesday' => 'Wednesday',
+                                        'thursday' => 'Thursday',
+                                        'friday' => 'Friday',
+                                        'saturday' => 'Saturday',
+                                        'sunday' => 'Sunday',
+                                    ])
+                                    ->required()
+                                    ->distinct(),
+                                Forms\Components\TimePicker::make('open')
+                                    ->label('Opens at')
+                                    ->seconds(false)
+                                    ->required(fn(Get $get): bool => ! $get('closed'))
+                                    ->disabled(fn(Get $get): bool => (bool) $get('closed'))
+                                    ->dehydrated(),
+                                Forms\Components\TimePicker::make('close')
+                                    ->label('Closes at')
+                                    ->seconds(false)
+                                    ->required(fn(Get $get): bool => ! $get('closed'))
+                                    ->disabled(fn(Get $get): bool => (bool) $get('closed'))
+                                    ->dehydrated(),
+                                Forms\Components\Toggle::make('closed')
+                                    ->label('Closed')
+                                    ->inline(false)
+                                    ->live()
+                                    ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                        if ($state) {
+                                            $set('open', null);
+                                            $set('close', null);
+                                        }
+                                    }),
+                            ])
+                            ->columns(4)
+                            ->defaultItems(0)
+                            ->reorderable(false)
+                            ->addActionLabel('Add Day')
+                            ->itemLabel(fn(array $state): ?string => ucfirst($state['day'] ?? 'New day'))
+                            ->collapsible()
+                            ->cloneable()
+                            ->columnSpanFull(),
+                        Forms\Components\Toggle::make('hide_business_hours')
+                            ->label('Hide Business Hours from Public View')
+                            ->helperText('When enabled, business hours will not be displayed on the public listing page')
+                            ->onIcon('heroicon-o-eye-slash')
+                            ->offIcon('heroicon-o-eye'),
+                    ]),
+
                 Forms\Components\Section::make('Social Media')
                     ->schema([
                         Forms\Components\TextInput::make('facebook_url')->url()->maxLength(255),
@@ -152,6 +224,24 @@ class ListingResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('city')->searchable(),
                 Tables\Columns\TextColumn::make('state'),
+                Tables\Columns\TextColumn::make('slug')
+                    ->label('View')
+                    ->formatStateUsing(fn(Listing $record) => $record->status === 'active'
+                        ? new HtmlString('<span style="color:rgb(59 130 246);text-decoration:underline;cursor:pointer;">View</span>')
+                        : new HtmlString('<span style="color:rgb(156 163 175);">View</span>'))
+                    ->html()
+                    ->url(fn(Listing $record) => $record->status === 'active'
+                        ? 'https://needanestimate.com/listing/' . $record->slug
+                        : null)
+                    ->openUrlInNewTab(),
+                Tables\Columns\IconColumn::make('hide_business_hours')
+                    ->boolean()
+                    ->label('Hours Hidden')
+                    ->trueIcon('heroicon-o-eye-slash')
+                    ->falseIcon('heroicon-o-eye')
+                    ->trueColor('warning')
+                    ->falseColor('success')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_featured')->boolean()->label('Featured'),
                 Tables\Columns\IconColumn::make('is_claimed')->boolean()->label('Claimed'),
                 Tables\Columns\TextColumn::make('created_at')
@@ -173,6 +263,18 @@ class ListingResource extends Resource
                     ->relationship('category', 'name'),
                 Tables\Filters\TernaryFilter::make('is_featured')->label('Featured'),
                 Tables\Filters\TernaryFilter::make('is_claimed')->label('Claimed'),
+                Tables\Filters\TernaryFilter::make('has_services')
+                    ->label('Has Services')
+                    ->queries(
+                        true: fn($query) => $query->whereNotNull('services')->where('services', '!=', '[]'),
+                        false: fn($query) => $query->where(fn($q) => $q->whereNull('services')->orWhere('services', '[]')),
+                    ),
+                Tables\Filters\TernaryFilter::make('has_hours')
+                    ->label('Has Hours')
+                    ->queries(
+                        true: fn($query) => $query->whereNotNull('operating_hours')->where('operating_hours', '!=', '[]'),
+                        false: fn($query) => $query->where(fn($q) => $q->whereNull('operating_hours')->orWhere('operating_hours', '[]')),
+                    ),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
