@@ -184,7 +184,7 @@ class ListingResource extends Resource
                         Forms\Components\TextInput::make('twitter_url')->url()->maxLength(255),
                         Forms\Components\TextInput::make('linkedin_url')->url()->maxLength(255),
                         Forms\Components\TextInput::make('yelp_url')->url()->maxLength(255),
-                        Forms\Components\TextInput::make('video_url')->url()->maxLength(255),
+                        // Forms\Components\TextInput::make('video_url')->url()->maxLength(255),
                     ])->columns(3)->collapsed(),
 
                 Forms\Components\Section::make('SEO & Keywords')
