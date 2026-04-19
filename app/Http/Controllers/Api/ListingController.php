@@ -259,7 +259,8 @@ class ListingController extends Controller
         }
 
         $request->validate([
-            'cover' => ['required', 'image', 'max:10240'], // 10MB
+            // max:3072 means 3MB (in kilobytes)
+            'cover' => ['required', 'image', 'max:3072'], // 3MB
         ]);
 
         $listing->addMediaFromRequest('cover')
@@ -284,9 +285,12 @@ class ListingController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
+
         $request->validate([
-            'images' => ['required', 'array', 'max:20'],
-            'images.*' => ['image', 'max:10240'],
+            // max:8 means up to 8 images in the gallery
+            'images' => ['required', 'array', 'max:8'],
+            // max:3072 means 3MB per image
+            'images.*' => ['image', 'max:3072'],
         ]);
 
         foreach ($request->file('images') as $image) {

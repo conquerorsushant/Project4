@@ -75,18 +75,19 @@ class ListingResource extends Resource
                         SpatieMediaLibraryFileUpload::make('cover')
                             ->collection('cover')
                             ->image()
-                            ->maxSize(10240)
+                            ->maxSize(3072) // 3MB
                             ->label('Cover Image')
-                            ->helperText('Recommended: 1200x600px')
+                            ->helperText('Recommended: 1200x600px, Max size: 3MB')
                             ->columnSpanFull(),
                         SpatieMediaLibraryFileUpload::make('gallery')
                             ->collection('gallery')
                             ->image()
                             ->multiple()
                             ->reorderable()
-                            ->maxSize(10240)
-                            ->maxFiles(20)
+                            ->maxSize(3072) // 3MB per image
+                            ->maxFiles(8) // Max 8 images
                             ->label('Photo Gallery')
+                            ->helperText('Up to 8 images, each max 3MB')
                             ->columnSpanFull(),
                     ]),
 
